@@ -16,6 +16,10 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+## Command Execution Logging (Mandatory)
+
+For every actual `/speckit-constitution` invocation, follow `.github/skills/speckit-logger/SKILL.md` to resolve the feature directory and append exactly one row to `specs/<feature-directory>/spec-kit-log.md`. This command must log itself; do not assume another skill or wrapper will do it. Log after command work and mandatory hooks finish, before reporting completion. If an error causes an early exit, create the resolved directory/log if needed and record a `FAILED` row before reporting the error. Use `specs/project/` only when there is no feature-specific context.
+
 ## Scope Guard
 
 This command's own work is limited to updating the project constitution itself. Dependent templates

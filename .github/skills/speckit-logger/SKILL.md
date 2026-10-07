@@ -1,13 +1,13 @@
 ---
 name: "speckit-logger"
-description: "Track every GitHub Spec Kit / Copilot command execution in a single project log. ."
+description: "Track every GitHub Spec Kit / Copilot command execution in per-feature logs."
 ---
 
 # Spec Kit Command Logger
 
 ## Purpose
 
-Track every GitHub Spec Kit / Copilot command execution in one project-root log. Create the log on the first tracked command if it does not already exist.
+Track every GitHub Spec Kit / Copilot Spec Kit command execution in a per-feature log. Every command skill must append its own invocation record; do not rely on this logger skill being invoked separately. Create the feature directory and log on the first tracked command for that feature if they do not already exist. Every row must use the actual local datetime read from the system clock at logging time.
 
 The logger records:
 
@@ -18,10 +18,10 @@ The logger records:
 - Status
 - Optional notes
 
-The log file must be named `spec-kit-log.md` and stored at the project root:
+Each log file must be named `spec-kit-log.md` and stored in its feature directory:
 
 ```text
-spec-kit-log.md
+specs/<feature-directory>/spec-kit-log.md
 ```
 
 ## Log Format
@@ -29,20 +29,26 @@ spec-kit-log.md
 Append one entry for every command execution.
 
 ```markdown
-| Date/Time | Feature | Branch | Command | Status | Notes |
+| Execution Time (ISO 8601) | Feature | Branch | Command | Status | Notes |
 |---|---|---|---|---|---|
-| 2026-09-30 13:45:10 +05:30 | user-auth | feature/user-auth | /specify | SUCCESS | Created specification |
+| 2026-09-30 13:45:10 +05:30 | user-auth | feature/user-auth | /speckit-specify | SUCCESS | Created specification |
 ```
 
 ## Commands To Track
 
-Track these commands:
+Track every command defined by a `.github/skills/speckit-*/SKILL.md` file, including:
 
 ```text
 /speckit-specify
 /speckit-plan
 /speckit-tasks
 /speckit-implement
+/speckit-analyze
+/speckit-checklist
+/speckit-clarify
+/speckit-constitution
+/speckit-converge
+/speckit-taskstoissues
 ```
 
 Also track equivalent commands if they are executed through a Copilot/SpecKit workflow.
@@ -51,14 +57,15 @@ Also track equivalent commands if they are executed through a Copilot/SpecKit wo
 
 Determine the feature from the current Spec Kit feature context.
 
-Preferred sources, in order:
+Resolve the feature directory using these sources, in order:
 
-1. Current feature/spec directory
-2. Current branch name
-3. Command arguments
-4. Existing `spec.md`
-5. Existing `plan.md`
-6. Existing `tasks.md`
+1. The feature directory being created or updated by the command (for example, `SPECIFY_FEATURE_DIRECTORY`)
+2. `.specify/feature.json`'s `feature_directory` value
+3. The current feature/spec directory
+4. The current branch name or command arguments, converted to a feature slug under `specs/`
+5. The feature directory containing the current `spec.md`, `plan.md`, or `tasks.md`
+
+Preserve the resolved directory name exactly, including any numeric prefix (for example, `001-user-auth`). If no feature-specific context exists, use `specs/project`.
 
 Examples:
 
@@ -102,7 +109,13 @@ Never assume the branch name.
 
 ## Timestamp
 
-Record the actual command execution time.
+Record the actual command completion time by reading the system clock immediately before appending the row. On Windows, run:
+
+```powershell
+Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz'
+```
+
+Copy the returned datetime into the log exactly as printed. Do not infer the time from the current date, reuse an example, or substitute `00:00:00`/midnight. A midnight value is valid only if the clock command actually returned midnight.
 
 Use ISO 8601 format with timezone:
 
@@ -115,6 +128,8 @@ Example:
 ```text
 2026-09-30 13:45:10 +05:30
 ```
+
+This is an illustrative value only; never reuse it for a real invocation.
 
 ## Status
 
@@ -134,24 +149,25 @@ Use `FAILED` when the command encountered an error or did not complete.
 After each tracked Spec Kit/Copilot command completes:
 
 1. Detect the current Git branch.
-2. Detect the feature name.
+2. Resolve the feature directory using `Feature Detection`.
 3. Determine the executed command.
-4. Capture the current timestamp.
+4. Read the live system clock and capture the actual datetime using the `Timestamp` procedure; never infer or default the time.
 5. Determine command status.
-6. Check for `spec-kit-log.md` at the project root. If it does not exist, create it with the initial content below before recording the command.
-7. Append exactly one new row for this command invocation to that file.
-8. Never overwrite the file or modify previous log entries unless explicitly requested.
+6. Create the resolved directory under `specs/` if it does not exist.
+7. Check for `specs/<feature-directory>/spec-kit-log.md`. If it does not exist, create it with the initial content below before recording the command.
+8. Append exactly one new row for this command invocation to that feature's log.
+9. Never overwrite the file or modify previous log entries unless explicitly requested.
 
 ## Initial Log File
 
-If `spec-kit-log.md` does not exist, create:
+If `specs/<feature-directory>/spec-kit-log.md` does not exist, create:
 
 ```markdown
 # Spec Kit Command Execution Log
 
 This file automatically tracks Spec Kit/Copilot command executions.
 
-| Date/Time | Feature | Branch | Command | Status | Notes |
+| Execution Time (ISO 8601) | Feature | Branch | Command | Status | Notes |
 |---|---|---|---|---|---|
 ```
 
@@ -160,62 +176,62 @@ This file automatically tracks Spec Kit/Copilot command executions.
 After:
 
 ```text
-/specify Build user authentication
+/speckit-specify Build user authentication
 ```
 
 append:
 
 ```markdown
-| 2026-09-30 13:45:10 +05:30 | user-auth | feature/user-auth | /specify | SUCCESS | Build user authentication |
+| 2026-09-30 13:45:10 +05:30 | user-auth | feature/user-auth | /speckit-specify | SUCCESS | Build user authentication |
 ```
 
 After:
 
 ```text
-/plan
+/speckit-plan
 ```
 
 append:
 
 ```markdown
-| 2026-09-30 13:52:31 +05:30 | user-auth | feature/user-auth | /plan | SUCCESS | Generated implementation plan |
+| 2026-09-30 13:52:31 +05:30 | user-auth | feature/user-auth | /speckit-plan | SUCCESS | Generated implementation plan |
 ```
 
 After:
 
 ```text
-/tasks
+/speckit-tasks
 ```
 
 append:
 
 ```markdown
-| 2026-09-30 14:01:22 +05:30 | user-auth | feature/user-auth | /tasks | SUCCESS | Generated implementation tasks |
+| 2026-09-30 14:01:22 +05:30 | user-auth | feature/user-auth | /speckit-tasks | SUCCESS | Generated implementation tasks |
 ```
 
 After:
 
 ```text
-/implement
+/speckit-implement
 ```
 
 append:
 
 ```markdown
-| 2026-09-30 14:20:45 +05:30 | user-auth | feature/user-auth | /implement | SUCCESS | Implementation completed |
+| 2026-09-30 14:20:45 +05:30 | user-auth | feature/user-auth | /speckit-implement | SUCCESS | Implementation completed |
 ```
 
 ## Important Rules
 
-### Single Log
+### One Log Per Feature
 
-Always use the one project-root file named:
+Always use one file named `spec-kit-log.md` inside each feature directory:
 
 ```text
-spec-kit-log.md
+specs/<feature-directory>/spec-kit-log.md
 ```
 
-Do not create separate logs for individual features or store the log in a feature directory. Create the file on the first tracked command if it is missing.
+Do not write new entries to a project-root log or share a log between features. Create each feature's log on its first tracked command if it is missing.
 
 ### Append Only
 
@@ -236,10 +252,10 @@ Every actual command invocation must produce exactly one log entry.
 For example:
 
 ```text
-/specify
-/plan
-/tasks
-/implement
+/speckit-specify
+/speckit-plan
+/speckit-tasks
+/speckit-implement
 ```
 
 must produce four entries.
@@ -251,7 +267,7 @@ Failed commands must also be logged.
 Example:
 
 ```markdown
-| 2026-09-30 14:25:17 +05:30 | user-auth | feature/user-auth | /implement | FAILED | TypeScript compilation failed |
+| 2026-09-30 14:25:17 +05:30 | user-auth | feature/user-auth | /speckit-implement | FAILED | TypeScript compilation failed |
 ```
 
 ### Branch Changes

@@ -16,6 +16,15 @@ $ARGUMENTS
 
 You **MUST** consider the user input before proceeding (if not empty).
 
+## Command Execution Logging (Mandatory)
+
+For every actual `/speckit-specify` invocation, follow `.github/skills/speckit-logger/SKILL.md` and append exactly one row to `specs/<feature-directory>/spec-kit-log.md`. This command must perform the logging itself and must not assume that the logger skill was invoked separately.
+
+- Record the command after its work and mandatory hooks finish, before reporting completion. If any error causes an early exit, record the failed invocation before reporting the error.
+- If the feature directory or its `spec-kit-log.md` does not exist, create it using the `Initial Log File` template in the logger skill, then append the record. If specification generation fails before a feature directory is resolved, derive the directory from the feature description as specified in the logger skill. Never overwrite existing entries.
+- Record the current branch, feature, actual timestamp with timezone, command `/speckit-specify`, and `SUCCESS` or `FAILED`. Use `FAILED` if specification generation or a mandatory hook fails.
+- Write exactly one row per invocation, including failed invocations; do not log mere mentions of the command.
+
 ## Pre-Execution Checks
 
 **Check for extension hooks (before specification)**:
